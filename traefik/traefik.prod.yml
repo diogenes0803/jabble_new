@@ -1,0 +1,50 @@
+# Define log level and API settings
+log:
+  level: INFO  # Recommended for production
+
+api:
+  dashboard: true
+
+# Enable Docker provider
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    watch: true
+    exposedByDefault: false  # Do not expose containers by default
+
+# Define HTTP and HTTPS entry points
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true  # Redirect HTTP to HTTPS permanently
+
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: letsencrypt  # Use the Let's Encrypt resolver
+
+# Certificates resolvers with Let's Encrypt
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: "diogenes0803@gmail.com"  # Replace with your actual email
+      storage: "/acme.json"  # Store certificates data
+      httpChallenge:
+        entryPoint: web  # Use the HTTP entry point for the challenge
+
+# Dashboard router setup
+http:
+  routers:
+    dashboard:
+      rule: "Host(`dashboard.jabble.prod`)"  # Change to your actual domain for the dashboard
+      entryPoints:
+        - "websecure"
+      service: "api@internal"
+      tls:
+        certResolver: letsencrypt

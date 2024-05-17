@@ -1,0 +1,20 @@
+# Define log level and API settings
+log:
+  level: DEBUG
+
+api:
+  dashboard: true
+  insecure: true
+
+# Enable Docker provider
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    watch: true
+    exposedByDefault: false  # Do not expose containers by default
+
+# Define HTTP entry point
+entryPoints:
+  web:
+    address: ":80"
+

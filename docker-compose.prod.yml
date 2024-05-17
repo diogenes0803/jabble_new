@@ -1,0 +1,58 @@
+services:
+  traefik:
+    image: traefik:v3.0
+    command:
+      - "--log.level=INFO"
+      - "--api.dashboard=false"
+      - "--providers.docker=true"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./traefik/traefik.prod.yml:/etc/traefik/traefik.yml"
+      - "./acme.json:/acme.json"
+
+  jabble-backend:
+    build:
+      context: ./jabble-backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jabble-backend.rule=Host(`jabble.kr`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.jabble-backend.entrypoints=websecure"
+      - "traefik.http.routers.jabble-backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.jabble-backend.loadbalancer.server.port=80"
+    environment:
+      - ENVIRONMENT=production
+
+  jabble-front:
+    build:
+      context: ./jabble-front
+      target: production
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jabble-front.rule=Host(`jabble.kr`)"
+      - "traefik.http.routers.jabble-front.entrypoints=websecure"
+      - "traefik.http.routers.jabble-front.tls.certresolver=letsencrypt"
+      - "traefik.http.services.jabble-front.loadbalancer.server.port=3000"
+
+  mysql:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: jabble
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:
+  acme.json:
+
+networks:
+  default:
+    name: traefik_default
+    external: true

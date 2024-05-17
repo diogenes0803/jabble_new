@@ -1,0 +1,56 @@
+services:
+  traefik:
+    image: traefik:v3.0
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entryPoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"  # Traefik Dashboard
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./traefik/traefik.dev.yml:/etc/traefik/traefik.yml"
+
+  jabble-backend:
+    build:
+      context: ./jabble-backend
+      target: development
+      args:
+        USER_ID: $UID
+        GROUP_ID: $GID
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jabble-backend.rule=Host(`localhost`) && PathPrefix(`/api`)"
+      - "traefik.http.services.jabble-backend.loadbalancer.server.port=80"
+    volumes:
+      - ./jabble-backend:/var/www/html
+    environment:
+      - ENVIRONMENT=development
+
+  jabble-front:
+    build:
+      context: ./jabble-front
+      target: development
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jabble-front.rule=Host(`localhost`)"
+      - "traefik.http.services.jabble-front.loadbalancer.server.port=3000"
+    volumes:
+      - ./jabble-front:/app
+    environment:
+      - NODE_ENV=development
+
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: jabble
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:
